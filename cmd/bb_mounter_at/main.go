@@ -101,14 +101,14 @@ func fsconfig(fsfd int, cmd int, key string, value string, flags int) (err error
 	return
 }
 
-func usage() {
-	fmt.Println(`Usage: bb_mounter_at <pathname> [delay]
-
-	Waits to unmount for 'delay' seconds, default 5.
-	`)
-}
-
 func main() {
+	usage := func() {
+		fmt.Println(`Usage: bb_mounter_at <pathname> [delay]
+
+		Waits to unmount for 'delay' seconds, default 5.
+		`)
+	}
+
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
@@ -148,6 +148,8 @@ func main() {
 	directory.fd = dfd
 	directory.name = rootdir
 
+	// NB: This is not yet functional code.
+	// Trying to perform an "Indiana-Jones swap" to a well-known absolute path which can be unmounted thusly.
 	scratch_area := "/tmp/mount-graveyard"
 	err = os.MkdirAll(scratch_area, mode)
 	if err != nil {
@@ -185,8 +187,13 @@ func main() {
 }
 
 func mountat(dfd int, fstype, source, mountname string) (int, error) {
-	/// Returns `mfd` the file descriptor to the mount object.
-	// ...
+	// Mounts the `source` filesystem on `mountname` inside a directory
+	// given as `dfd` file descriptor.
+	// Using the `fstype` filesystem type.
+	//
+	// Returns:
+	//    `mfd`: the file descriptor to the mount object.
+	//    `err`: error
 	fd, err := unix.Fsopen(fstype, unix.FSOPEN_CLOEXEC)
 	if err != nil {
 		return -1, err
@@ -241,6 +248,9 @@ func unmountat(mountname, directory_path_segments string) error {
 	//     <line>
 	//     line = <path> <other>
 	// for <path>.
+	//
+	// Note: this is called "unmount" just like `unix.Unmount`,
+	// even though the syscall (we emulate) is called "umount" for historical reasons.
 	//
 	// Example:
 	//     sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
