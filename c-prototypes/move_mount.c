@@ -127,6 +127,11 @@ main(int argc, char* argv[])
     //     strace: fsmount(5, FSMOUNT_CLOEXEC, MOUNT_ATTR_NOEXEC) = -1 EBUSY (Device or resource busy)
     // But `fsmount` fails, so this does not seem to be it.
 
+    // And using `open_tree` gives failures for `fsconfig` directly.
+    //     code:   int mmmfd = open_tree(s_dfd, mountpoint, 0);
+    //     code:   fsconfig(mmmfd, FSCONFIG_CMD_RECONFIGURE, NULL, NULL, 0);
+    //     strace: fsconfig(5, FSCONFIG_CMD_RECONFIGURE, NULL, NULL, 0) = -1 EBADF (Bad file descriptor)
+
     // Try to use 'move_mount' on the tree file descriptor from 'open_tree'
     //    code:   int mmfd = open_tree(s_dfd, mountpoint, 0);
     //    code:   move_mount(mmfd, "", d_dfd, mountpoint, MOVE_MOUNT_F_EMPTY_PATH);

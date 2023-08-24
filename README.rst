@@ -27,6 +27,17 @@ Before writing good error-checking go code I wrote these to prototype.
 To understand errors I recommend using `strace`
 to see how the syscalls are called and what they return.
 
+Relative mount
+--------------
+
+`relative_mount.c` shows that `mount` can take relative paths,
+but they must start with "./".
+Combined with a `fchdir` to the file descriptor this can be used
+to emulate "mountat".
+This takes a directory name and creates "proc" inside it.
+
+    https://github.com/torvalds/linux/blob/93f5de5f648d2b1ce3540a4ac71756d4a852dc23/tools/testing/selftests/openat2/resolve_test.c#L75
+
 Mountat
 -------
 
@@ -53,6 +64,21 @@ which can be created from any path, relative or absolute.
     $ sudo "$prog" mnt
     $ tree -L 3 | tail -1
     740 directories, 48 files
+
+Relative unmount
+----------------
+
+Just like `mount`_ we can use relative paths in `unmount`
+by first changing to the directory in which we operate.
+This is avaialble in `relative_unmount.c`.
+
+.. _mount: `relative mount`_
+
+Unmountat
+---------
+
+Has not been possible,
+see `move mount`_ for the progress.
 
 Move mount
 ----------
