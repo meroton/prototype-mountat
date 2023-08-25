@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 	"unsafe"
 
@@ -105,6 +106,9 @@ func main() {
 	usage := func() {
 		fmt.Println(`Usage: bb_mounter_at <pathname> [delay]
 
+		Mounts '/proc' and '/sys' into a directory,
+		using mount points called "proc" and "sys" respectively.
+
 		Waits to unmount for 'delay' seconds, default 5.
 		`)
 	}
@@ -147,14 +151,7 @@ func main() {
 
 	directory.fd = dfd
 	directory.name = rootdir
-
-	// NB: This is not yet functional code.
-	// Trying to perform an "Indiana-Jones swap" to a well-known absolute path which can be unmounted thusly.
-	scratch_area := "/tmp/mount-graveyard"
-	err = os.MkdirAll(scratch_area, mode)
-	if err != nil {
-		panic(err)
-	}
+	to_unmount := []string{}
 
 	for _, mount := range []struct {
 		name   string
@@ -177,13 +174,17 @@ func main() {
 			panic(err)
 		}
 
-		defer unmountat(mount.name, rootdir)
+		to_unmount = append(to_unmount, mount.name)
 	}
 
 	fmt.Printf("sleeping %d seconds.\n", delay)
 	time.Sleep(time.Duration(delay) * time.Second)
-	fmt.Println("unmounting")
-
+	for _, mount := range to_unmount {
+		err := unmountat(mount, rootdir)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func mountat(dfd int, fstype, source, mountname string) (int, error) {
@@ -356,25 +357,18 @@ func unmountat(mountname, directory_path_segments string) error {
 	}
 	match := matches[0]
 
-	// Loop and try to unmount again if the target is busy.
-	IsBusy := func(err error) bool {
-		switch e := err.(type) {
-		case syscall.Errno:
-			return e == syscall.EBUSY
-		default:
-			return false
-		}
-	}
-	for {
-		err = unix.Unmount(match, unix.MNT_FORCE)
-		if err != nil {
-			if !IsBusy(err) {
-				return err
-			}
-		} else {
-			break
-		}
+	fmt.Printf("Unmounting '%s' at '%s'.\n", mountname, match)
+	return unmount(match)
+
+}
+
+func unmount(path string) error {
+	cmd := exec.Command("umount", path)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Subprocess error: unmount:")
+		log.Fatal(err)
 	}
 
-	return nil
+	return err
 }

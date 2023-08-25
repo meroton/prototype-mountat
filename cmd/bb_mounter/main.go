@@ -93,5 +93,4 @@ func main() {
 		}
 		defer unix.Unmount(dev, noflags)
 	}
-
 }
