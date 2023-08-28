@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -42,7 +43,6 @@ const (
 //
 //	so the user does not need to worry about a potential file descriptor.
 func fsconfig(fsfd int, cmd int, key string, value string, flags int) (err error) {
-
 	switch cmd {
 	case FSCONFIG_SET_STRING:
 		if len(key) == 0 || len(value) == 0 {
@@ -102,6 +102,11 @@ func fsconfig(fsfd int, cmd int, key string, value string, flags int) (err error
 	return
 }
 
+type entry = struct {
+	fd int
+	path string
+}
+
 func main() {
 	usage := func() {
 		fmt.Println(`Usage: bb_mounter_at <pathname> [delay]
@@ -151,7 +156,7 @@ func main() {
 
 	directory.fd = dfd
 	directory.name = rootdir
-	to_unmount := []string{}
+	to_unmount := []entry{}
 
 	for _, mount := range []struct {
 		name   string
@@ -169,18 +174,22 @@ func main() {
 		}
 
 		fmt.Printf("mounting %s into %d (file descriptor for) %s.\n", mount.source, directory.fd, directory.name)
-		_, err := mountat(directory.fd, mount.fstype, mount.source, mount.name)
+		mfd, err := mountat(directory.fd, mount.fstype, mount.source, mount.name)
 		if err != nil {
 			panic(err)
 		}
 
-		to_unmount = append(to_unmount, mount.name)
+		to_unmount = append(to_unmount, entry{mfd, mount.name})
 	}
 
 	fmt.Printf("sleeping %d seconds.\n", delay)
 	time.Sleep(time.Duration(delay) * time.Second)
 	for _, mount := range to_unmount {
-		err := unmountat(mount, rootdir)
+		err := syscall.Close(mount.fd)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = unmountat(mount.path, rootdir)
 		if err != nil {
 			log.Fatal(err)
 		}

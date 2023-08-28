@@ -99,6 +99,8 @@ which has always worked after the process completes
     /proc on /tmp/tmp.jz4HILGKEA/bazel-run/proc type proc (rw,noexec,relatime)
     /sys on /tmp/tmp.jz4HILGKEA/bazel-run/sys type sysfs (rw,noexec,relatime)
 
+Yes! `syscall.Close(mfd)` does the trick.
+
 C prototypes
 ============
 
