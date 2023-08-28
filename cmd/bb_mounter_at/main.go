@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -189,7 +188,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = unmountat(mount.path, rootdir)
+		err = unmountat_fstab(mount.path, rootdir)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -251,6 +250,7 @@ func unmountat(mountname, directory_path_segments string) error {
 	//     error - propagated from calls,
 	//           - or if there are multiple matches
 	//             to the `directory_path_segment` and `mountname`.
+	//           - EBUSY: If there is an open file descriptor of the mount.
 	//
 	/// Look for any previous mount
 	// that matches what information we have about the mount point.
@@ -372,12 +372,5 @@ func unmountat(mountname, directory_path_segments string) error {
 }
 
 func unmount(path string) error {
-	cmd := exec.Command("umount", path)
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println("Subprocess error: unmount:")
-		log.Fatal(err)
-	}
-
-	return err
+	return unix.Unmount(path, 0)
 }

@@ -32,10 +32,12 @@ which exists mostly for completeness sake, it is not valuable here.
 .. _unmount-through-fstab: http://white:3000/docs/improved-chroot-in-buildbarn/integrating-mountat/#second-best-effort-use-new-mountat-but-hack-unmounting-through-absolute-paths
 .. _relative-unmount: http://white:3000/docs/improved-chroot-in-buildbarn/implementing-unmountat/#relative-unmount
 
-EBUSY
------
+Development log: EBUSY
+----------------------
 
-The go programs sometime gets caught up in the unmount path,
+tl;dr: you must close the mount file descriptor before calling `unmount` on the mount point.
+
+The go programs got caught up in the unmount path,
 that the mount points are busy.
 Even with the `MNT_FORCE` flag.
 
