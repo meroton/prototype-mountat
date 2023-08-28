@@ -5,7 +5,10 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/meroton/meroton/buildbarn/cmd/bb_mounter_at",
     visibility = ["//visibility:private"],
-    deps = ["@org_golang_x_sys//unix"],
+    deps = [
+        "@org_golang_x_sys//unix",
+        "@io_bazel_rules_go//go/runfiles",
+    ],
 )
 
 go_binary(

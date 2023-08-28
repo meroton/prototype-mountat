@@ -7,12 +7,14 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 
+	"github.com/bazelbuild/rules_go/go/runfiles"
 	"golang.org/x/sys/unix"
 )
 
@@ -188,7 +190,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = unmountat_fstab(mount.path, rootdir)
+		err = unmountat_relative(directory.fd, mount.path)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -230,7 +232,24 @@ func mountat(dfd int, fstype, source, mountname string) (int, error) {
 	return mfd, nil
 }
 
-func unmountat(mountname, directory_path_segments string) error {
+func unmountat_relative(dfd int, mountname string) error {
+	/// Hacky unmountat
+	// Uses a subprocess to isloate the `fchdir` from the main program.
+
+	unmounter, err := runfiles.Rlocation("unmount_relative")
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(unmounter, string(dfd), mountname)
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func unmountat_fstab(mountname, directory_path_segments string) error {
 	/// Hacky unmountat
 	//
 	// Will unmount a named mount point `mountname` using `/etc/mtab` to look up previous mounts.
