@@ -4,7 +4,7 @@ Prototype mountat
 Implement "mountat" with the new mount API.
 
 This is reference code for our work
-to improve `chroot` in `Buildbarn`_.
+to improve ``chroot`` in `Buildbarn`_.
 A technical write up is `available here`_
 
 .. _Buildbarn: https://github.com/buildbarn/bb-remote-execution/
@@ -13,19 +13,19 @@ A technical write up is `available here`_
 Goals
 =====
 
-✅ Implement `mountat`
+✅ Implement ``mountat``
 
-❌ Implement `umountat`
+❌ Implement ``umountat``
 
-✅ Workarounds for `unmountat` in go.
+✅ Workarounds for ``unmountat`` in go.
 
 Go programs
 ===========
 
-A go implementation of `mountat` is available in `bb_mounter_at`_.
+A go implementation of ``mountat`` is available in `bb_mounter_at`_.
 This currently has the `unmount-through-fstab`_ hack,
 but will be rewritten to use `relative-unmount`_.
-There is also a stub implementation using regular `mount` in `bb_mounter`_,
+There is also a stub implementation using regular ``mount`` in `bb_mounter`_,
 which exists mostly for completeness sake, it is not valuable here.
 
 .. _bb_mounter_at: https://github.com/meroton/prototype-mountat/blob/main/cmd/bb_mounter_at/main.go
@@ -37,10 +37,10 @@ which exists mostly for completeness sake, it is not valuable here.
 bb_mounter_at
 -------------
 
-Demonstrates the new `mountat` function and provides implementations of two possible workarounds for `unmountat`.
-Only the `relative-unmount` workaround is actually used,
+Demonstrates the new ``mountat`` function and provides implementations of two possible workarounds for ``unmountat``.
+Only the ``relative-unmount`` workaround is actually used,
 as we find that better.
-There a subprocess is executed that calls `unmount` using a directory file descriptor.
+There a subprocess is executed that calls ``unmount`` using a directory file descriptor.
 
 ::
 
@@ -52,7 +52,7 @@ There a subprocess is executed that calls `unmount` using a directory file descr
         //cmd/bb_mounter_at \
         -- /tmp/tmp.jz4HILGKEA/bazel-run 10
 
-It first creates mounts for `/proc` and `/sys`
+It first creates mounts for ``/proc`` and ``/sys``
 and then waits for some time (default 5, here 10 seconds).
 You can then observe that the mounts are created before they are later removed.
 
@@ -70,18 +70,18 @@ You can then observe that the mounts are created before they are later removed.
 C prototypes
 ============
 
-The `c-prototypes/` directory contains our prototype,
+The ``c-prototypes/`` directory contains our prototype,
 that have simple implementations of the functions we want using the new syscalls.
 Before writing good error-checking go code I wrote these to prototype.
-To understand errors I recommend using `strace`
+To understand errors I recommend using ``strace``
 to see how the syscalls are called and what they return.
 
 Relative mount
 --------------
 
-`relative_mount.c` shows that `mount` can take relative paths,
+``relative_mount.c`` shows that ``mount`` can take relative paths,
 but they must start with "./".
-Combined with a `fchdir` to the file descriptor this can be used
+Combined with a ``fchdir`` to the file descriptor this can be used
 to emulate "mountat".
 This takes a directory name and creates "proc" inside it.
 
@@ -90,7 +90,7 @@ This takes a directory name and creates "proc" inside it.
 Mountat
 -------
 
-The `mountat_dfd.c` program shows how to create create and place mounts
+The ``mountat_dfd.c`` program shows how to create create and place mounts
 into a directory file descriptor,
 which can be created from any path, relative or absolute.
 
@@ -117,9 +117,9 @@ which can be created from any path, relative or absolute.
 Relative unmount
 ----------------
 
-Just like `mount`_ we can use relative paths in `unmount`
+Just like `mount`_ we can use relative paths in ``unmount``
 by first changing to the directory in which we operate.
-This is available in `relative_unmount.c`.
+This is available in ``relative_unmount.c``.
 
 .. _mount: `relative mount`_
 
@@ -136,7 +136,7 @@ The next exploratory step in trying to unmount the mounts we created.
 This attempts an "Indiana-Jones swap" by moving the mount to a better place,
 that we can address later.
 It should also be a step towards a full unmount,
-which can _allegedly_ be unmounted with `move_mount`, `fspick` and so on.
+which can _allegedly_ be unmounted with ``move_mount``, ``fspick`` and so on.
 
 This `tracee document`_ is also light but indicates that it should work
 based on the directory file descriptors and names therein.
@@ -177,7 +177,7 @@ we want the original to be unmounted.
 
 The `source file`_ contains commented out sections that I tried
 combined with their failures.
-Mostly `EINVAL` errors.
+Mostly ``EINVAL`` errors.
 
 They can probably be investigated further by reading warnings and errors
 from the file descriptors,
@@ -206,11 +206,11 @@ Unmount everything below the current directory:
     $ mount -v | choose 2      | xargs -n1 sudo umount
 
 This unmounts once, so if you have stacked mounts it must be called repeatedly.
-Shout-out to `choose`_ for many simple `cut` and `awk` use-cases.
-This is available as `./unmount` from the project root.
+Shout-out to `choose`_ for many simple ``cut`` and ``awk`` use-cases.
+This is available as ``./unmount`` from the project root.
 
-If we instead create the mount with `mountat` internally
-the mounts will have the `noexec` flag:
+If we instead create the mount with ``mountat`` internally
+the mounts will have the ``noexec`` flag:
 But we still end up with the original and the moved clone.
 
     /proc on /tmp/tmp.jz4HILGKEA/destination/proc type proc (rw,noexec,relatime)
@@ -231,7 +231,7 @@ Debugging the go program
       bazel-bin/cmd/bb_mounter_at/bb_mounter_at_/bb_mounter_at
     $ ln -s $PWD/bazel-bin/cmd/bb_mounter_at/bb_mounter_at_/bb_mounter_at bb_mounter_at
 
-Then use the `execroot`-trick to debug with `dlv`.
+Then use the ``execroot``-trick to debug with ``dlv``.
 
 ::
 
@@ -249,17 +249,17 @@ note:
 
 The go programs got caught up in the unmount path,
 that the mount points are busy.
-Even with the `MNT_FORCE` flag.
+Even with the ``MNT_FORCE`` flag.
 
 ::
 
     755587 umount2("/tmp/tmp.jz4HILGKEA/bazel-run/sys", MNT_FORCE <unfinished ...>
     755587 <... umount2 resumed>)           = -1 EBUSY (Device or resource busy)
 
-Note that this is `umount2`,
+Note that this is ``umount2``,
 
-With the unmount script from the `toolbox`_ we use the `unmount` program.
-Which always succeeds, though it does a lot more bookkeeping that the single `umount2` call.
+With the unmount script from the `toolbox`_ we use the ``unmount`` program.
+Which always succeeds, though it does a lot more bookkeeping that the single ``umount2`` call.
 Is this another misunderstanding of what to do?
 
 ::
@@ -267,20 +267,20 @@ Is this another misunderstanding of what to do?
     756273 umount2("/tmp/tmp.jz4HILGKEA/bazel-run/proc", 0) = 0
 
 For the reference the Kubernetes `mount-utils`_ package
-uses the `unmount` `program rather than the function`_ from the `unix package`_
+uses the ``unmount`` `program rather than the function`_ from the `unix package`_
 
 .. _mount-utils: https://github.com/kubernetes/mount-utils/
 .. _program rather than the function: https://github.com/kubernetes/mount-utils/blob/master/mount_linux.go#L808
 .. _unix package: https://pkg.go.dev/golang.org/x/sys@v0.11.0/unix#Unmount
 
-We can fork to exec `umount` internally,
+We can fork to exec ``umount`` internally,
 But it seems to fail too.
 From the console output::
 
     Unmounting 'proc' at '/tmp/tmp.jz4HILGKEA/bazel-run/proc'.
     2023/08/28 13:47:59 exit status 32
 
-Whereas `strace` indicates success::
+Whereas ``strace`` indicates success::
 
     778943 execve("/usr/bin/umount", ["umount", "/tmp/tmp.jz4HILGKEA/bazel-run/proc"], 0xc0001a4680 /* 24 vars */ <unfinished ...>
     778943 <... execve resumed>)            = 0
@@ -311,13 +311,13 @@ which has always worked after the process completes
     /proc on /tmp/tmp.jz4HILGKEA/bazel-run/proc type proc (rw,noexec,relatime)
     /sys on /tmp/tmp.jz4HILGKEA/bazel-run/sys type sysfs (rw,noexec,relatime)
 
-Yes! `syscall.Close(mfd)` does the trick.
+Yes! ``syscall.Close(mfd)`` does the trick.
 
 Relative unmount in go
 ----------------------
 
-We can now proceed to implement `relative-unmount` in go,
-and integrate it into `bb_mounter_at`,
+We can now proceed to implement ``relative-unmount`` in go,
+and integrate it into ``bb_mounter_at``,
 which drives it and feeds the file descriptor.
 
 note:
@@ -364,7 +364,7 @@ fork/exec::
 
 .. _remap the debug symbol paths: https://github.com/bazelbuild/rules_go/issues/1708#issuecomment-791114337
 
-Though `strace` indicates some kind of success.
+Though ``strace`` indicates some kind of success.
 
 ::
 
@@ -384,8 +384,8 @@ Debug wrappee
 
 This is always a fun experiment.
 The first order of business is to add tracing,
-the `exec.Command().Run()` code does not plumb the wrappee's output through,
-but we can see it with `strace`: `-e write`::
+the ``exec.Command().Run()`` code does not plumb the wrappee's output through,
+but we can see it with ``strace``: ``-e write``::
 
     [pid 992352] write(2, "Failed to parse file descriptor: '\3'\n", 37) = 37
     [pid 992352] write(2, "panic: ", 7)     = 7
@@ -395,7 +395,7 @@ We saw `above`_ that the argument is "\3"::
     execve("...relative_unmount", [..., "\3", "proc"], ... /* 24 vars */) = 0
 
 Which is now a problem.
-It is better to use `Sprintf` to format strings.
+It is better to use ``Sprintf`` to format strings.
 
 .. _above: `Debug the program`_
 
@@ -432,12 +432,12 @@ Dup:
     The  two  file  descriptors  do not share file descriptor flags (the close-on-exec flag).
     The close-on-exec flag (FD_CLOEXEC; see fcntl(2)) for the duplicate descriptor is off.
 
-But it is customary to open file descriptors with `FD_CLOEXEC` to avoid unintended consequences.
-Is this done through `os.Open(rootdir)`?
-The code indicates that only `O_RDONLY` is set,
-but the listing of flags to `os.Open` does not have `CLOEXEC`,
-that may be standard behavior for `open`.
+But it is customary to open file descriptors with ``FD_CLOEXEC`` to avoid unintended consequences.
+Is this done through ``os.Open(rootdir)``?
+The code indicates that only ``O_RDONLY`` is set,
+but the listing of flags to ``os.Open`` does not have ``CLOEXEC``,
+that may be standard behavior for ``open``.
 
 We can duplicate the descriptor,
-and not set `CLOEXEC` with `dup`
-(and more configuration can be done through `fcntl`).
+and not set ``CLOEXEC`` with ``dup``
+(and more configuration can be done through ``fcntl``).
