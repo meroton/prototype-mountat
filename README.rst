@@ -22,20 +22,20 @@ Goals
 Go programs
 ===========
 
-A go implementation of ``mountat`` is available in `bb_mounter_at`_.
+A go implementation of ``mountat`` is available in `mountat`_.
 This currently has the `unmount-through-fstab`_ hack,
 but will be rewritten to use `relative-unmount`_.
-There is also a stub implementation using regular ``mount`` in `bb_mounter`_,
+There is also a stub implementation using regular ``mount`` in `mount`_,
 which exists mostly for completeness sake, it is not valuable here.
 
-.. _bb_mounter_at: https://github.com/meroton/prototype-mountat/blob/main/cmd/bb_mounter_at/main.go
-.. _bb_mounter: https://github.com/meroton/prototype-mountat/blob/main/cmd/bb_mounter/main.go
+.. _mountat: https://github.com/meroton/prototype-mountat/blob/main/cmd/mountat/main.go
+.. _mount: https://github.com/meroton/prototype-mountat/blob/main/cmd/mount/main.go
 
 .. _unmount-through-fstab: http://white:3000/docs/improved-chroot-in-buildbarn/integrating-mountat/#second-best-effort-use-new-mountat-but-hack-unmounting-through-absolute-paths
 .. _relative-unmount: http://white:3000/docs/improved-chroot-in-buildbarn/implementing-unmountat/#relative-unmount
 
-bb_mounter_at
--------------
+mountat
+-------
 
 Demonstrates the new ``mountat`` function and provides implementations of two possible workarounds for ``unmountat``.
 Only the ``relative-unmount`` workaround is actually used,
@@ -49,7 +49,7 @@ There a subprocess is executed that calls ``unmount`` using a directory file des
     $ mkdir /tmp/tmp.jz4HILGKEA/bazel-run
 
     $ bazel run --run_under sudo \
-        //cmd/bb_mounter_at \
+        //cmd/mountat \
         -- /tmp/tmp.jz4HILGKEA/bazel-run 10
 
 It first creates mounts for ``/proc`` and ``/sys``
@@ -59,7 +59,7 @@ You can then observe that the mounts are created before they are later removed.
 ::
 
     $ bazel run --run_under sudo \
-        //cmd/bb_mounter_at \
+        //cmd/mountat \
         -- /tmp/tmp.jz4HILGKEA/bazel-run 1
     Mounting /proc into 7 (file descriptor for) /tmp/tmp.jz4HILGKEA/bazel-run.
     Mounting /sys into 7 (file descriptor for) /tmp/tmp.jz4HILGKEA/bazel-run.
@@ -117,11 +117,11 @@ which can be created from any path, relative or absolute.
 Relative unmount
 ----------------
 
-Just like `mount`_ we can use relative paths in ``unmount``
+Just `like mount`_ we can use relative paths in ``unmount``
 by first changing to the directory in which we operate.
 This is available in ``relative_unmount.c``.
 
-.. _mount: `relative mount`_
+.. _like mount: `relative mount`_
 
 Unmountat
 ---------
@@ -221,21 +221,30 @@ The convenience scripts are available `in the bin directory`_
 
 .. _in the bin directory: https://github.com/meroton/prototype-mountat/blob/main/bin/
 
-Debugging the go program
-------------------------
+.. _convenience symlink:
+
+Debug the go program
+--------------------
+
+Instead of `setting up the debug symbol paths`_
+once can use the execroot to debug the program,
+in there the debug symbol paths are correct.
+As all the source files are available as they were during compilation.
 
 ::
 
-    $ bazel build -c dbg //cmd/bb_mounter_at
-    Target //cmd/bb_mounter_at:bb_mounter_at up-to-date:
-      bazel-bin/cmd/bb_mounter_at/bb_mounter_at_/bb_mounter_at
-    $ ln -s $PWD/bazel-bin/cmd/bb_mounter_at/bb_mounter_at_/bb_mounter_at bb_mounter_at
+    $ bazel build -c dbg //cmd/mountat
+    Target //cmd/mountat:mountat up-to-date:
+      bazel-bin/cmd/mountat/mountat_/mountat
+    $ ln -s $PWD/bazel-bin/cmd/mountat/mountat_/mountat mountat
 
 Then use the ``execroot``-trick to debug with ``dlv``.
 
 ::
 
-    ./debug-bb_mounter_at /tmp/tmp.jz4HILGKEA
+    ./debug-mountat /tmp/tmp.jz4HILGKEA
+
+.. _setting up the debug symbol paths: `remap the debug symbol paths`_
 
 Development Log
 ===============
@@ -296,7 +305,7 @@ which has always worked after the process completes
 
 ::
 
-    $ sudo ./bb_mounter_at /tmp/tmp.jz4HILGKEA/bazel-run 100
+    $ sudo ./mountat /tmp/tmp.jz4HILGKEA/bazel-run 100
     mounting /proc into 3 (file descriptor for) /tmp/tmp.jz4HILGKEA/bazel-run.
     mounting /sys into 3 (file descriptor for) /tmp/tmp.jz4HILGKEA/bazel-run.
     sleeping 100 seconds.
@@ -317,7 +326,7 @@ Relative unmount in go
 ----------------------
 
 We can now proceed to implement ``relative-unmount`` in go,
-and integrate it into ``bb_mounter_at``,
+and integrate it into ``mountat``,
 which drives it and feeds the file descriptor.
 
 note:
@@ -329,7 +338,7 @@ note:
 Debug the program
 -----------------
 
-One consequence is that we can no longer use the convenience symlink
+One consequence is that we can no longer use the `convenience symlink`_
 to run the command.
 As it requires the runfiles tree,
 that the runfile library handles for us,
@@ -337,7 +346,7 @@ we just need some environment variables.
 
 ::
 
-    $ bazel run -c dbg --script_path=run //cmd/bb_mounter_at
+    $ bazel run -c dbg --script_path=run //cmd/mountat
     $ sed -i '$s|^|sudo '$(which dlv)' exec |' debug
     $ sudo ./run /tmp/tmp.jz4HILGKEA/bazel-run 1
 
@@ -354,7 +363,7 @@ This helps us inspect the runfiles::
 
     *github.com/bazelbuild/rules_go/go/runfiles.Runfiles {
             impl: github.com/bazelbuild/rules_go/go/runfiles.runfiles(github.com/bazelbuild/rules_go/go/runfiles.manifest) [
-                    "__main__/cmd/bb_mounter_at/bb_mounter_at_/bb_mounter_at": "/home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255c...+90 more",
+                    "__main__/cmd/mountat/mountat_/mountat": "/home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255c...+90 more",
                     "__main__/cmd/relative_unmount/relative_unmount_/relative_unmount": "/home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255c...+99 more",
 
 
@@ -368,7 +377,7 @@ Though ``strace`` indicates some kind of success.
 
 ::
 
-    $ bazel run -c dbg --run_under "sudo strace -f -s1000 -e execve" //cmd/bb_mounter_at -- /tmp/tmp.jz4HILGKEA/bazel-run 1
+    $ bazel run -c dbg --run_under "sudo strace -f -s1000 -e execve" //cmd/mountat -- /tmp/tmp.jz4HILGKEA/bazel-run 1
     ...
     [pid 987247] execve("/home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/bazel-out/k8-dbg/bin/cmd/relative_unmount/relative_unmount_/relative_unmount", ["/home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/bazel-out/k8-dbg/bin/cmd/relative_unmount/relative_unmount_/relative_unmount", "\3", "proc"], 0xc0000c0340 /* 24 vars */) = 0
     ...

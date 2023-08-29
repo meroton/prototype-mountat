@@ -1,16 +1,16 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_binary(
-    name = "bb_mounter",
-    embed = [":bb_mounter_lib"],
-    importpath = "github.com/meroton/meroton/buildbarn/cmd/bb_mounter",
+    name = "mount",
+    embed = [":mount_lib"],
+    importpath = "github.com/meroton/meroton/prototype-mountat/cmd/mount",
     visibility = ["//visibility:public"],
 )
 
 go_library(
-    name = "bb_mounter_lib",
+    name = "mount_lib",
     srcs = ["main.go"],
-    importpath = "github.com/meroton/meroton/buildbarn/cmd/bb_mounter",
+    importpath = "github.com/meroton/meroton/prototype-mountat/cmd/mounter",
     visibility = ["//visibility:private"],
     deps = ["@org_golang_x_sys//unix"],
 )
