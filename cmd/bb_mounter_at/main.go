@@ -153,7 +153,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	dfd := int(d.Fd())
+	open_dfd := int(d.Fd())
+	// Duplicate the file descriptor without `CLOEXEC` to send it to children.
+	dfd, err := unix.Dup(open_dfd)
+	if err != nil {
+		panic(err)
+	}
 
 	directory.fd = dfd
 	directory.name = rootdir
@@ -240,7 +245,7 @@ func unmountat_relative(dfd int, mountname string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(unmounter, string(dfd), mountname)
+	cmd := exec.Command(unmounter, fmt.Sprintf("%d", dfd), mountname)
 	err = cmd.Run()
 	if err != nil {
 		return err

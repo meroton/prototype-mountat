@@ -185,8 +185,52 @@ We saw `above`_ that the argument is "\3"::
     execve("...relative_unmount", [..., "\3", "proc"], ... /* 24 vars */) = 0
 
 Which is now a problem.
+It is better to use `Sprintf` to format strings.
 
 .. _above: `Debug`_
+
+Direcotry file descriptor
+-------------------------
+
+We now reach the meat of the implementation,
+the directory file descriptor must be sent to the child.
+
+::
+
+    [pid 994405] write(2, "Failed to change directory to file descriptor: '3'\n", 51) = 51
+    [pid 994405] write(2, "2023/08/29 09:51:11 bad file descriptor\n", 40) = 40
+
+    # a second run to log fchdir
+    [pid 995590] fchdir(3)                  = -1 EBADF (Bad file descriptor)
+
+Reminders:
+Fork:
+
+    *  The child inherits copies of the parent's set of open file descriptors.  Each file de‐
+       scriptor in the child refers to the same open file description (see  open(2))  as  the
+       corresponding file descriptor in the parent.  This means that the two file descriptors
+       share open file status flags, file offset, and signal-driven I/O attributes  (see  the
+       description of F_SETOWN and F_SETSIG in fcntl(2)).
+
+Execve:
+
+    *  By  default,  file  descriptors remain open across an execve().  File descriptors that
+       are marked close-on-exec are closed; ...
+
+Dup:
+
+    The  two  file  descriptors  do not share file descriptor flags (the close-on-exec flag).
+    The close-on-exec flag (FD_CLOEXEC; see fcntl(2)) for the duplicate descriptor is off.
+
+But it is customary to open file descriptors with `FD_CLOEXEC` to avoid unintended consequences.
+Is this done through `os.Open(rootdir)`?
+The code indicates that only `O_RDONLY` is set,
+but the listing of flags to `os.Open` does not have `CLOEXEC`,
+that may be standard behavior for `open`.
+
+We can duplicate the descriptor,
+and not set `CLOEXEC` with `dup`
+(and more configuration can be done through `fcntl`).
 
 PT_INTERP
 ---------
