@@ -46,7 +46,7 @@ func main() {
 	}
 	err = unix.Unmount(name, 0)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to unmount '%s' in  directory file descriptor: '%d'\n",  name, dfd)
+		fmt.Fprintf(os.Stderr, "Failed to unmount '%s' in  directory file descriptor: '%d'\n", name, dfd)
 		log.Fatal(err)
 	}
 }

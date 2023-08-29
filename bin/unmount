@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# mount -v | grep "$PWD" | choose 2 | xargs -n1 sudo umount
+mount -v | grep "$PWD" | cut -d' ' -f3| xargs -n1 sudo umount

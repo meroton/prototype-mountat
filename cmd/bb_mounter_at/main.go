@@ -104,8 +104,23 @@ func fsconfig(fsfd int, cmd int, key string, value string, flags int) (err error
 }
 
 type entry = struct {
-	fd int
+	fd   int
 	path string
+}
+
+func openFileDescriptor(path string) (int, error) {
+	d, err := os.Open(path)
+	if err != nil {
+		return -1, err
+	}
+	open_dfd := int(d.Fd())
+
+	// Duplicate the file descriptor without `CLOEXEC` to send it to children.
+	dfd, err := unix.Dup(open_dfd)
+	if err != nil {
+		return -1, err
+	}
+	return dfd, nil
 }
 
 func main() {
@@ -123,20 +138,31 @@ func main() {
 		usage()
 		os.Exit(1)
 	}
-	if os.Args[1] == "-h" || os.Args[1] == "--help" {
-		usage()
-		os.Exit(0)
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" || arg == "--help" {
+			usage()
+			os.Exit(0)
+		}
 	}
 
 	rootdir := os.Args[1]
+
 	delay := int64(5)
 	if len(os.Args) > 2 {
 		d, err := strconv.ParseInt(os.Args[2], 10, 32)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		delay = d
 	}
+
+	err := do(rootdir, delay)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do(rootdir string, delay int64) error {
 	directory := struct {
 		fd   int
 		name string // for diagnostic prints, do not use.
@@ -147,17 +173,11 @@ func main() {
 	var err error
 	err = os.MkdirAll(rootdir, mode)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	d, err := os.Open(rootdir)
+	dfd, err := openFileDescriptor(rootdir)
 	if err != nil {
-		panic(err)
-	}
-	open_dfd := int(d.Fd())
-	// Duplicate the file descriptor without `CLOEXEC` to send it to children.
-	dfd, err := unix.Dup(open_dfd)
-	if err != nil {
-		panic(err)
+		return err
 	}
 
 	directory.fd = dfd
@@ -175,20 +195,24 @@ func main() {
 		err = unix.Mkdirat(directory.fd, mount.name, 0700)
 		if err != nil {
 			if !os.IsExist(err) {
-				panic(err)
+				return err
 			}
 		}
 
-		fmt.Printf("mounting %s into %d (file descriptor for) %s.\n", mount.source, directory.fd, directory.name)
+		fmt.Printf("Mounting %s into %d (file descriptor for) %s.\n", mount.source, directory.fd, directory.name)
 		mfd, err := mountat(directory.fd, mount.fstype, mount.source, mount.name)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		to_unmount = append(to_unmount, entry{mfd, mount.name})
 	}
 
-	fmt.Printf("sleeping %d seconds.\n", delay)
+	unit := "seconds"
+	if delay == 1 {
+		unit = "second"
+	}
+	fmt.Printf("Sleeping %d %s.\n", delay, unit)
 	time.Sleep(time.Duration(delay) * time.Second)
 	for _, mount := range to_unmount {
 		err := syscall.Close(mount.fd)
@@ -200,6 +224,8 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+
+	return nil
 }
 
 func mountat(dfd int, fstype, source, mountname string) (int, error) {
@@ -241,6 +267,7 @@ func unmountat_relative(dfd int, mountname string) error {
 	/// Hacky unmountat
 	// Uses a subprocess to isolate the `fchdir` from the main program.
 
+	fmt.Printf("Unmounting %s from %d (directory file descriptor).\n", mountname, dfd)
 	unmounter, err := runfiles.Rlocation("__main__/cmd/relative_unmount/relative_unmount_/relative_unmount")
 	if err != nil {
 		return err
@@ -391,8 +418,12 @@ func unmountat_fstab(mountname, directory_path_segments string) error {
 	match := matches[0]
 
 	fmt.Printf("Unmounting '%s' at '%s'.\n", mountname, match)
-	return unmount(match)
+	err = unmount(match)
+	if err != nil {
+		return err
+	}
 
+	return nil
 }
 
 func unmount(path string) error {
