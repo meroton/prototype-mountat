@@ -234,9 +234,9 @@ func mountat(dfd int, fstype, source, mountname string) (int, error) {
 
 func unmountat_relative(dfd int, mountname string) error {
 	/// Hacky unmountat
-	// Uses a subprocess to isloate the `fchdir` from the main program.
+	// Uses a subprocess to isolate the `fchdir` from the main program.
 
-	unmounter, err := runfiles.Rlocation("unmount_relative")
+	unmounter, err := runfiles.Rlocation("__main__/cmd/relative_unmount/relative_unmount_/relative_unmount")
 	if err != nil {
 		return err
 	}
