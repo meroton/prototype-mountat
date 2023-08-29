@@ -70,7 +70,7 @@ From the console output::
     Unmounting 'proc' at '/tmp/tmp.jz4HILGKEA/bazel-run/proc'.
     2023/08/28 13:47:59 exit status 32
 
-Whereas strace indicates success::
+Whereas `strace` indicates success::
 
     778943 execve("/usr/bin/umount", ["umount", "/tmp/tmp.jz4HILGKEA/bazel-run/proc"], 0xc0001a4680 /* 24 vars */ <unfinished ...>
     778943 <... execve resumed>)            = 0
@@ -154,7 +154,7 @@ fork/exec::
 
 .. _remap the debug symbol paths: https://github.com/bazelbuild/rules_go/issues/1708#issuecomment-791114337
 
-Though strace indicates some kind of success.
+Though `strace` indicates some kind of success.
 
 ::
 
@@ -175,7 +175,7 @@ Debug wrappee
 This is always a fun experiment.
 The first order of business is to add tracing,
 the `exec.Command().Run()` code does not plumb the wrappee's output through,
-but we can see it with strace: `-e write`::
+but we can see it with `strace`: `-e write`::
 
     [pid 992352] write(2, "Failed to parse file descriptor: '\3'\n", 37) = 37
     [pid 992352] write(2, "panic: ", 7)     = 7
@@ -231,51 +231,6 @@ that may be standard behavior for `open`.
 We can duplicate the descriptor,
 and not set `CLOEXEC` with `dup`
 (and more configuration can be done through `fcntl`).
-
-PT_INTERP
----------
-
-This is a deep dive into everything Linux.
-shell::
-
-    $ readelf -l /bin/sh
-
-    Elf file type is DYN (Position-Independent Executable file)
-    Entry point 0x4ef0
-    There are 13 program headers, starting at offset 64
-
-    Program Headers:
-      Type           Offset             VirtAddr           PhysAddr
-                     FileSiz            MemSiz              Flags  Align
-      PHDR           0x0000000000000040 0x0000000000000040 0x0000000000000040
-                     0x00000000000002d8 0x00000000000002d8  R      0x8
-      INTERP         0x0000000000000318 0x0000000000000318 0x0000000000000318
-                     0x000000000000001c 0x000000000000001c  R      0x1
-          [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
-
-relative_unmount::
-
-    $ readelf -l /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/bazel-out/k8-dbg/bin/cmd/relative_unmount/relative_unmount_/relative_unmount | head -20
-
-    Elf file type is EXEC (Executable file)
-    Entry point 0x45fc80
-    There are 7 program headers, starting at offset 64
-
-    Program Headers:
-      Type           Offset             VirtAddr           PhysAddr
-                     FileSiz            MemSiz              Flags  Align
-      PHDR           0x0000000000000040 0x0000000000400040 0x0000000000400040
-                     0x0000000000000188 0x0000000000000188  R      0x1000
-      NOTE           0x0000000000000fe8 0x0000000000400fe8 0x0000000000400fe8
-                     0x0000000000000018 0x0000000000000018  R      0x4
-      LOAD           0x0000000000000000 0x0000000000400000 0x0000000000400000
-                     0x000000000008ce57 0x000000000008ce57  R E    0x1000
-      LOAD           0x000000000008d000 0x000000000048d000 0x000000000048d000
-                     0x0000000000099138 0x0000000000099138  R      0x1000
-      LOAD           0x0000000000127000 0x0000000000527000 0x0000000000527000
-                     0x0000000000018180 0x0000000000049c30  RW     0x1000
-      GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000
-                     0x0000000000000000 0x0000000000000000  RW     0x8
 
 C prototypes
 ============
