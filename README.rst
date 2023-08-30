@@ -352,13 +352,13 @@ which has always worked after the process completes
     mounting /sys into 3 (file descriptor for) /tmp/tmp.jz4HILGKEA/bazel-run.
     sleeping 100 seconds.
 
-    /tmp/tmp.jz4HILGKEA $ ./list                                                   tmux: 1/2
+    /tmp/tmp.jz4HILGKEA $ ./list
     /proc on /tmp/tmp.jz4HILGKEA/bazel-run/proc type proc (rw,noexec,relatime)
     /sys on /tmp/tmp.jz4HILGKEA/bazel-run/sys type sysfs (rw,noexec,relatime)
-    /tmp/tmp.jz4HILGKEA $ ./unmount                                                tmux: 1/2
+    /tmp/tmp.jz4HILGKEA $ ./unmount
     umount: /tmp/tmp.jz4HILGKEA/bazel-run/proc: target is busy.
     umount: /tmp/tmp.jz4HILGKEA/bazel-run/sys: target is busy.
-    /tmp/tmp.jz4HILGKEA $ ./list                                                   tmux: 1/2
+    /tmp/tmp.jz4HILGKEA $ ./list
     /proc on /tmp/tmp.jz4HILGKEA/bazel-run/proc type proc (rw,noexec,relatime)
     /sys on /tmp/tmp.jz4HILGKEA/bazel-run/sys type sysfs (rw,noexec,relatime)
 
