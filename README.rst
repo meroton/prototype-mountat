@@ -227,9 +227,10 @@ Debug the go program
 --------------------
 
 Instead of `setting up the debug symbol paths`_
-once can use the execroot to debug the program,
+one can use the execroot to debug the program,
 in there the debug symbol paths are correct.
 As all the source files are available as they were during compilation.
+This works fine for simple programs.
 
 ::
 
@@ -239,12 +240,53 @@ As all the source files are available as they were during compilation.
     $ ln -s $PWD/bazel-bin/cmd/mountat/mountat_/mountat mountat
 
 Then use the ``execroot``-trick to debug with ``dlv``.
+And create a shell script: ``debug-mountat``.
+
+    #!/bin/sh
+
+    repo=$PWD
+    cd bazel-prototype-mountat/ || exit 1
+    # Depending on how you installed it, it may not be on the super user PATH.
+    dlv="$(command -v dlv)"
+
+    sudo "$dlv" exec "$repo"/mountat "$@"
 
 ::
 
     ./debug-mountat /tmp/tmp.jz4HILGKEA
 
 .. _setting up the debug symbol paths: `remap the debug symbol paths`_
+.. _remap the debug symbol paths: https://github.com/bazelbuild/rules_go/issues/1708#issuecomment-791114337
+
+Debug runfiles
+--------------
+
+But when debugging with runfiles you need more from the environment,
+which ``bazel run`` sets for you.
+It is still possible to create a shell script
+by starting with ``--script_path=<my-debug-script>``.
+
+
+::
+
+    $ bazel run -c dbg --script_path=run //cmd/mountat
+    $ sed -i '$s|^|sudo '$(which dlv)' exec |' debug
+    $ sudo ./run /tmp/tmp.jz4HILGKEA/bazel-run 1
+
+But this is much worse at finding the source files.
+So we need to `remap the debug symbol paths`_,
+as is customary for ``bazel`` projects.
+
+::
+
+    (dlv) config substitute-path external /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/external
+    (dlv) config substitute-path cmd      /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/cmd
+    # if we had pkg deps
+    (dlv) config substitute-path pkg      /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/pkg
+
+Which can be fed through start-up options/configuration,
+
+Or you could just use ``bazel run`` ``--run_under``.
 
 Development Log
 ===============
@@ -335,31 +377,10 @@ note:
    so the unmounting program may receive a number that is not a valid descriptor.
    We will address that in due time.
 
-Debug the program
------------------
+Check the available runfiles
+----------------------------
 
-One consequence is that we can no longer use the `convenience symlink`_
-to run the command.
-As it requires the runfiles tree,
-that the runfile library handles for us,
-we just need some environment variables.
-
-::
-
-    $ bazel run -c dbg --script_path=run //cmd/mountat
-    $ sed -i '$s|^|sudo '$(which dlv)' exec |' debug
-    $ sudo ./run /tmp/tmp.jz4HILGKEA/bazel-run 1
-
-But this is much worse at finding the source files.
-So we need to `remap the debug symbol paths`_,
-as is customary for bazel projects.
-
-::
-
-    (dlv) config substitute-path external /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/external
-    (dlv) config substitute-path cmd      /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/cmd
-
-This helps us inspect the runfiles::
+We `open the debugger`_ and print the runfiles::
 
     *github.com/bazelbuild/rules_go/go/runfiles.Runfiles {
             impl: github.com/bazelbuild/rules_go/go/runfiles.runfiles(github.com/bazelbuild/rules_go/go/runfiles.manifest) [
@@ -367,11 +388,11 @@ This helps us inspect the runfiles::
                     "__main__/cmd/relative_unmount/relative_unmount_/relative_unmount": "/home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255c...+99 more",
 
 
+So we adjust the wrappee name to ``<name>/<name>_/<name>``
+
 fork/exec::
 
     2023/08/28 16:48:30 fork/exec /home/nils/.cache/bazel/_bazel_nils/0604d25345427c49ad66cdd3255cacf2/execroot/__main__/bazel-out/k8-dbg/bin/cmd/relative_unmount/relative_unmount_/relative_unmount: invalid argument
-
-.. _remap the debug symbol paths: https://github.com/bazelbuild/rules_go/issues/1708#issuecomment-791114337
 
 Though ``strace`` indicates some kind of success.
 
@@ -387,6 +408,8 @@ Though ``strace`` indicates some kind of success.
 
 This looks like the inner process does spawn,
 it just fails with error code 2
+
+.. _open the debugger: `debug runfiles`_
 
 Debug wrappee
 -------------
@@ -406,7 +429,7 @@ We saw `above`_ that the argument is "\3"::
 Which is now a problem.
 It is better to use ``Sprintf`` to format strings.
 
-.. _above: `Debug the program`_
+.. _above: `Debug the go program`_
 
 Directory file descriptor
 -------------------------
