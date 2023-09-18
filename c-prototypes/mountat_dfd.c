@@ -56,6 +56,8 @@ mountat(int dfd, const char *fstype, const char *source, const char *name)
     fsconfig(fd, FSCONFIG_CMD_CREATE, NULL, NULL, 0);
     int mfd = fsmount(fd, FSMOUNT_CLOEXEC, MS_NOEXEC);
     move_mount(mfd, "", dfd, name, MOVE_MOUNT_F_EMPTY_PATH);
+    close(mfd);
+    close(fd);
 }
 
 int
@@ -68,8 +70,17 @@ main(int argc, char* argv[])
 
     char* dir = argv[1];
     int dfd = openat(AT_FDCWD, dir, 0);
+    mkdirat(dfd, "proc", 0777);
+    mkdirat(dfd, "sys", 0777);
+
     mountat(dfd, "proc", "/proc", "proc");
     mountat(dfd, "sysfs", "/sys", "sys");
+
+    sleep(10);
+
+    fchdir(dfd);
+    umount("proc");
+    umount("sys");
 }
 
 // vim: foldmethod=marker

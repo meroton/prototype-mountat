@@ -93,6 +93,10 @@ Mountat
 The ``mountat_dfd.c`` program shows how to create create and place mounts
 into a directory file descriptor,
 which can be created from any path, relative or absolute.
+The program mounts both ``/proc`` and ``/sys`` into the directory file descriptor,
+waits ten seconds, and then unmounts them.
+
+You can check in another terminal during the wait.
 
 ::
 
@@ -102,17 +106,47 @@ which can be created from any path, relative or absolute.
     /tmp/tmp.jz4HILGKEA
     $ cd /tmp/tmp.jz4HILGKEA
 
-    $ mkdir -p mnt/{sys,proc}
-    $ tree
-    .
-    └── mnt
-        ├── proc
-        └── sys
-
-    3 directories, 0 files
     $ sudo "$prog" mnt
+
+    # In another terminal
     $ tree -L 3 | tail -1
     740 directories, 48 files
+
+
+For the reference these syscalls are executed::
+
+    openat(AT_FDCWD, "/tmp/tmp.txujxNhTK4", O_RDONLY) = 3
+    mkdirat(3, "proc", 0777)        = -1 EEXIST (File exists)
+    mkdirat(3, "sys", 0777)         = -1 EEXIST (File exists)
+
+    fsopen("proc", FSOPEN_CLOEXEC)  = 4
+    fsconfig(4, FSCONFIG_SET_STRING, "source", "/proc", 0) = 0
+    fsconfig(4, FSCONFIG_CMD_CREATE, NULL, NULL, 0) = 0
+    fsmount(4, FSMOUNT_CLOEXEC, MOUNT_ATTR_NOEXEC) = 5
+    move_mount(5, "", 3, "proc", MOVE_MOUNT_F_EMPTY_PATH) = 0
+    close(5)                        = 0
+    close(4)                        = 0
+
+    fsopen("sysfs", FSOPEN_CLOEXEC) = 4
+    fsconfig(4, FSCONFIG_SET_STRING, "source", "/sys", 0) = 0
+    fsconfig(4, FSCONFIG_CMD_CREATE, NULL, NULL, 0) = 0
+    fsmount(4, FSMOUNT_CLOEXEC, MOUNT_ATTR_NOEXEC) = 5
+    move_mount(5, "", 3, "sys", MOVE_MOUNT_F_EMPTY_PATH) = 0
+    close(5)                        = 0
+    close(4)                        = 0
+
+    clock_nanosleep(CLOCK_REALTIME, 0, {tv_sec=10, tv_nsec=0}, {tv_sec=8, tv_nsec=838178906}) = ? ERESTART_RESTARTBLOCK (Interrupted by signal)
+    --- SIGWINCH {si_signo=SIGWINCH, si_code=SI_KERNEL} ---
+    restart_syscall(<... resuming interrupted clock_nanosleep ...>) = 0
+
+    fchdir(3)                       = 0
+    umount2("proc", 0)              = 0
+    umount2("sys", 0)               = 0
+    exit_group(0)                   = ?
+
+It is important to close the ``mfd`` mount file descriptor before unmounting,
+else ``umount`` fails with ``EBUSY``,
+we also close the ``fd`` file descriptor from ``fsopen`` for good measure.
 
 Relative unmount
 ----------------
